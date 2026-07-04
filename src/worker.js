@@ -1,16 +1,19 @@
-// Cloudflare Worker: veilige proxy voor de AI-fotoscan in de losse app/PWA-versie.
-// 1) Maak gratis account op workers.cloudflare.com  2) Nieuwe Worker, plak deze code
-// 3) Voeg in Settings > Variables een secret toe: ANTHROPIC_API_KEY (van console.anthropic.com)
-// 4) Deploy; vul de Worker-URL in bij SCAN_PROXY_URL bovenin index.html
+// PI27 scan-proxy — met slot: alleen de PI27-app mag deze worker gebruiken.
 export default {
   async fetch(request, env) {
+    const ALLOWED = 'https://nick012607.github.io';
+    const origin = request.headers.get('Origin') || '';
     const cors = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': ALLOWED,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     };
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (request.method !== 'POST') return new Response('POST only', { status: 405, headers: cors });
+    if (origin !== ALLOWED) {
+      return new Response(JSON.stringify({ error: { message: 'Deze proxy werkt alleen voor de PI27-app.' } }),
+        { status: 403, headers: { ...cors, 'Content-Type': 'application/json' } });
+    }
     const body = await request.text();
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
